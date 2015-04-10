@@ -37,6 +37,7 @@ public class WordChapter implements WritableComparable<WordChapter>, Serializabl
 		this.chapter = chapter;
 	}
 
+	//Dont worry about this
 	@Override
 	public void readFields(DataInput in) throws IOException {
 		// TODO Auto-generated method stub
@@ -44,6 +45,7 @@ public class WordChapter implements WritableComparable<WordChapter>, Serializabl
 		chapter.readFields(in);
 	}
 
+	//Dont worry about this
 	@Override
 	public void write(DataOutput out) throws IOException {
 		// TODO Auto-generated method stub
@@ -56,6 +58,8 @@ public class WordChapter implements WritableComparable<WordChapter>, Serializabl
 		return (word.toString() + chapter.toString()).hashCode();
 	}
 
+	// This is tricky. WordChapter can only be compared against other WordChapters
+	// If two WordChapters are the same, then they should have the same word AND filename/chapter
 	@Override
 	public int compareTo(WordChapter that) {
 		int res = this.word.toString().compareTo(that.getWord().toString());

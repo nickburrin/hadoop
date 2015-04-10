@@ -10,6 +10,7 @@ I’ve created some handy scripts to start and stop all the services called star
 3) I have included the source code. You should recompile the source files, wrap them in a jar, and delete the remote output folder everytime you make changes to your source code. To do this I wrapped all those commands in a shell file(redo.sh), and if your file system looks like mine (see view.jpg), then this recompile and run.
 
 **Note, if you start the services and then stop them, you MAY have to delete the contents of hdfs/namenode/ and hdfs/datanode/ before starting the services again. One way to avoid this is just never stop the services, try to run the example in the pdf and if that works, compile with our source code. 
+**If you see a blank when you run "jps", it is probably eclipse. Dont worry about it.
 
 I was getting this error when I quit, if you get this on the first run with our source code, you’re caught up:
 15/04/09 17:58:44 INFO mapreduce.Job: Task Id : attempt_1428607256561_0009_m_000009_1, Status : FAILED
@@ -27,4 +28,4 @@ Error: java.io.IOException: Type mismatch in key from map: expected org.apache.h
 	at java.security.AccessController.doPrivileged(Native Method)
 	at javax.security.auth.Subject.doAs(Subject.java:422)
 	at org.apache.hadoop.security.UserGroupInformation.doAs(UserGroupInformation.java:1628)
-	at org.apache.hadoop.mapred.YarnChild.main(YarnChild.java:158)
+	at org.apache.hadoop.mapred.YarnChild.main(YarnChild.java:159)

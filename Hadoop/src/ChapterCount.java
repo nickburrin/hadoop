@@ -14,31 +14,28 @@ public class ChapterCount implements WritableComparable<ChapterCount>, Serializa
 	 */
 	private static final long serialVersionUID = 1579855138498247809L;
 	Text chapter;
-	IntWritable occurances;
+	IntWritable occurences;
 
 	public ChapterCount(Text text, IntWritable result) {
 		super();
 		chapter = new Text(text);
-		occurances = result;
+		occurences = result;
 	}
 
+	//Dont worry about this
 	@Override
 	public void readFields(DataInput in) throws IOException {
 		// TODO Auto-generated method stub
 		chapter.readFields(in);
-		occurances.readFields(in);
+		occurences.readFields(in);
 	}
 
+	//Dont worry about this
 	@Override
 	public void write(DataOutput out) throws IOException {
 		// TODO Auto-generated method stub
 		chapter.write(out);
-		occurances.write(out);
-	}
-
-	public void write(Text word, IntWritable one) {
-		chapter = word;
-		occurances = one;
+		occurences.write(out);
 	}
 
 	public Text getChapter() {
@@ -50,11 +47,11 @@ public class ChapterCount implements WritableComparable<ChapterCount>, Serializa
 	}
 
 	public IntWritable getOccurances() {
-		return occurances;
+		return occurences;
 	}
 
 	public void setOccurances(IntWritable occurances) {
-		this.occurances = occurances;
+		this.occurences = occurances;
 	}
 
 	@Override
@@ -62,6 +59,8 @@ public class ChapterCount implements WritableComparable<ChapterCount>, Serializa
 		return chapter.hashCode();
 	}
 
+	// ChapterCount variables can ONLY be compared against other ChapterCounts. 
+	// The thing that makes them different is the filename/chapter
 	@Override
 	public int compareTo(ChapterCount other) {
 		return chapter.compareTo(other.chapter);
