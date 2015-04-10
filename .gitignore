@@ -1,0 +1,15 @@
+bin/
+etc/
+hdfs/
+include/
+lib/
+libexec/
+LICENSE.txt
+logs/
+NOTICE.txt
+runlog
+sbin/
+share/
+.DS_Store
+.metadata
+.recommenders
