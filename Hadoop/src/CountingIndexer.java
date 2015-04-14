@@ -3,22 +3,21 @@ import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 public class CountingIndexer {
 
-	public static class TokenizerMapper extends Mapper<Object, Text, WordChapter, IntWritable>{
+	public static class TokenizerMapper extends Mapper<Object, Text, Text, Text>{
 
-		private IntWritable one = new IntWritable(1);
-		private Text word = new Text();
-		private Text chapter = new Text();
-		
+		private Text one = new Text("1");
+		private Text word_chapter = new Text();
+
 		/**
 		 * The mapper function takes in <Object, Text> --> <WordChapter, IntWritable>
 		 * Parses the input and writes the output to the context. The parameters of the 
@@ -28,19 +27,23 @@ public class CountingIndexer {
 		@Override
 		public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
 			StringTokenizer itr = new StringTokenizer(value.toString());
-			chapter.set(context.getWorkingDirectory().getName());			//Get the file name (not sure if works)
-			
-			System.out.println("Chapter value "+chapter);
-			
+
+			String chapter = ((FileSplit) context.getInputSplit()).getPath().getName();
+
 			while (itr.hasMoreTokens()) {
-				word.set(itr.nextToken().replaceAll("[^\\p{L}+]", " "));	//Strip the word of non-letter characters
-				context.write(new WordChapter(word, chapter), one);			//Write the output 
+				String parsed = itr.nextToken().replaceAll("[^\\p{L}+]", " ");	//Strip the word of non-letter characters
+				StringTokenizer tok = new StringTokenizer(parsed);
+
+				while(tok.hasMoreTokens()){
+					word_chapter = new Text(tok.nextToken().toLowerCase() + " " + chapter);
+					context.write(word_chapter, one);			//Write the output
+				}
 			}
 		}
 	}
 
-	public static class ChapterNumReducer extends Reducer<WordChapter, IntWritable, Text, ChapterCount>{
-		private IntWritable result = new IntWritable();
+	public static class ChapterNumReducer extends Reducer<Text, Text, Text, Text>{
+		private Text result = new Text();
 
 		/**
 		 * Technically this is the "combiner function". <WordChapter, IntWritable> --> <Text, ChapterCount>
@@ -49,20 +52,22 @@ public class CountingIndexer {
 		 * will be one ChapterCount that looks like <"hey", <chap00, 10>>.
 		 */
 		@Override
-		public void reduce(WordChapter key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
 			int sum = 0;
 
-			for (IntWritable val : values) {
+			for (Text val : values) {
 				//Sum the number of times a given word is found in one chapter
-				sum += val.get();
+				sum += Integer.parseInt(val.toString());
 			}
-			
-			result.set(sum);
-			context.write(key.getWord(), new ChapterCount(key.getChapter(), result));	//Write the output
+
+			result.set("<" + key.toString().split(" ")[1] + ", " + sum + ">");	//move chapter from key to value
+			key.set(key.toString().substring(0, key.toString().indexOf(" ")));	//remove the chapter from key
+
+			context.write(key, result);	//Write the output
 		}
 	}
 
-	public static class AggregateChapters extends Reducer<Text, ChapterCount, Text, ChapterArray> {
+	public static class AggregateChapters extends Reducer<Text, Text, Text, ChapterArray> {
 		private ChapterArray result = new ChapterArray();
 
 		/**
@@ -72,28 +77,38 @@ public class CountingIndexer {
 		 * every ChapterCount associated with one word i.e. ("hey", <chap00, 10>, <chap04, 14>, ....)
 		 */
 		@Override
-		public void reduce(Text key, Iterable<ChapterCount> values, Context context) throws IOException, InterruptedException {
-			
-			for (ChapterCount val : values) {
-				result.add(val);
+		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+			String out = "\n";
+			int sum;
+			int chap;
+
+			for (Text val : values) {
+				sum = Integer.parseInt(val.toString().substring(9, val.toString().length()-1));
+				chap = Integer.parseInt(val.toString().substring(5, 7));
+				result.add(val, sum, chap);
 			}
+
 			context.write(key, result);
 		}
 	}
 
+	//After you undo this, you're back to where you were
 	public static void main(String[] args) throws Exception {
 		Configuration conf = new Configuration();
-		Job job = Job.getInstance(conf, "pride and prejudice"); //if you view the job counters, I'm assuming it's name will be "pride and prejudice"
-		job.setJarByClass(CountingIndexer.class); //setting the main method of the jar
+		Job job = Job.getInstance(conf, "pride and prejudice");
+		job.setJarByClass(CountingIndexer.class);
 
-		//Setting mapper, combinere, and reducer classes
+		//Settings for mapper, combiner and reducer
 		job.setMapperClass(TokenizerMapper.class);
 		job.setCombinerClass(ChapterNumReducer.class);
 		job.setReducerClass(AggregateChapters.class);
 
-		//Setting output types and remote input/output paths
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(Text.class);
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(ChapterArray.class);
+
+		//File path stuff
 		FileInputFormat.addInputPath(job, new Path(args[0]));
 		FileOutputFormat.setOutputPath(job, new Path(args[1]));
 
