@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
@@ -67,7 +68,7 @@ public class CountingIndexer {
 		}
 	}
 
-	public static class AggregateChapters extends Reducer<Text, Text, Text, ChapterArray> {
+	public static class AggregateChapters extends Reducer<Text, Text, Text, Text> {
 		private ChapterArray result = new ChapterArray();
 
 		/**
@@ -78,16 +79,48 @@ public class CountingIndexer {
 		 */
 		@Override
 		public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-			String out = "\n";
+			
 			int sum;
 			int chap;
+			ArrayList<String> output = new ArrayList<String>();
 
 			for (Text val : values) {
-				sum = Integer.parseInt(val.toString().substring(9, val.toString().length()-1));
-				chap = Integer.parseInt(val.toString().substring(5, 7));
-				result.add(val, sum, chap);
+//				result.add(val, sum, chap);
+				String insert = val.toString();
+				sum = Integer.parseInt(insert.substring(9, insert.length()-1));
+				chap = Integer.parseInt(insert.substring(5, 7));
+				String temp = "";
+				boolean added = false;
+				
+				for(int i = 0; i < output.size(); i++){
+					temp = output.get(i);
+					int tempSum = Integer.parseInt(temp.substring(9, temp.length()-1));
+					if(sum > tempSum){
+						output.add(i, insert);
+						added = true;
+						break;
+					} else if(sum == tempSum){
+						if(chap < Integer.parseInt(temp.substring(5, 7))){
+							output.add(i, insert);
+							added = true;
+							break;
+						}
+					}
+				}
+				
+				if(added == false){
+					output.add(insert);
+				}
+				
+				added = false;
 			}
-
+			
+			String out = "\n";
+			for(int i = 0; i < output.size(); i++){
+				out += output.get(i) + "\n";
+			}
+			
+			Text result = new Text(out);
 			context.write(key, result);
 		}
 	}
